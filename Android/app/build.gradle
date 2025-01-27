@@ -84,9 +84,9 @@ task prepareAssetsFiles() {
 	copy {
 		from "${projRoot}/client/shaders" into "${assetsFolder}/client/shaders"
 	}
-	copy {
+	/*copy {
 		from "../native/deps/irrlicht/shaders" into "${assetsFolder}/client/shaders/Irrlicht"
-	}
+	}*/
 	copy {
 		from "${projRoot}/fonts/MultiCraftFont.ttf" into "${assetsFolder}/fonts"
 		from "${projRoot}/fonts/NotoEmoji.ttf" into "${assetsFolder}/fonts"
