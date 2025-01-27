@@ -134,7 +134,7 @@ void set_default_settings()
 	settings->setDefault("autodig", "false");
 	settings->setDefault("fastdig", "false");
 	settings->setDefault("dont_point_nodes", "false");
-//	settings->setDefault("dodge_rotation_speed", "0.08");
+
 	
 	
 
