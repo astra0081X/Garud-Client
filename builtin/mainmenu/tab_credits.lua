@@ -23,7 +23,7 @@ local client_developers = {
 }
 local client_credits = {
 	"Maintainer_ [Help]",
-	"Otter [Tracsrs and ESP for CTF]",
+	"Otter [Tracers and ESP for CTF]",
 	"Prounce [Custom Sky]",
 }
 
