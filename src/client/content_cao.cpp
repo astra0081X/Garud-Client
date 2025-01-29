@@ -918,8 +918,7 @@ void GenericCAO::updateLight(u32 day_night_ratio)
     u8 light = decode_light(light_at_pos + m_glow);
 	
 	if (g_settings->getBool("fullbright"))
-		light = video::SColor(0xFFFFFFFF);
-
+		light = 0xFF;
 	
 	if (light != m_last_light) {
 		m_last_light = light;
