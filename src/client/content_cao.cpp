@@ -915,10 +915,12 @@ void GenericCAO::updateLight(u32 day_night_ratio)
 		light_at_pos = blend_light(day_night_ratio, LIGHT_SUN, 0);
 
 	
-    if(g_settings->getBool("fullbright")) {
-		light_at_pos = 255;
-	}
-	u8 light = decode_light(light_at_pos + m_glow);
+    u8 light = decode_light(light_at_pos + m_glow);
+	
+	if (g_settings->getBool("fullbright"))
+		light = video::SColor(0xFFFFFFFF);
+
+	
 	if (light != m_last_light) {
 		m_last_light = light;
 		setNodeLight(light);
