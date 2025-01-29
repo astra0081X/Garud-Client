@@ -1104,43 +1104,19 @@ AuthMechanism Client::choseAuthMech(const u32 mechs)
 	return AUTH_MECHANISM_NONE;
 }
 
-std::string getRandomString(int length) {
-
-    std::random_device rd; 
-    std::mt19937 eng(rd());
-
-
-    std::uniform_int_distribution<> distr('a', 'z');
-
-    std::string random_string;
-    for (int i = 0; i < length; ++i) {
-        random_string += static_cast<char>(distr(eng));
-    }
-
-    return random_string;
-}
-
 void Client::sendInit(const std::string &playerName)
 {
-    std::string version = getRandomString(1) + ".";
-	std::string platform_name = getRandomString(5);
-	std::string app_name = getRandomString(10);
-
-	NetworkPacket pkt(TOSERVER_INIT, 1 + 2 + 2 + 2 + (playerName.size() + 2) +
-			1 + (version.size() + 2) + (platform_name.size() + 2) +
-			(app_name.size() + 2));
+	NetworkPacket pkt(TOSERVER_INIT, 1 + 2 + 2 + (1 + playerName.size()));
 
 	// we don't support network compression yet
 	u16 supp_comp_modes = NETPROTO_COMPRESSION_NONE;
 
 	pkt << (u8) SER_FMT_VER_HIGHEST_READ << (u16) supp_comp_modes;
 	pkt << (u16) CLIENT_PROTOCOL_VERSION_MIN << (u16) CLIENT_PROTOCOL_VERSION_MAX;
-	pkt << playerName << (u8) 2;
-	pkt << version << platform_name << app_name;
+	pkt << playerName;
 
 	Send(&pkt);
 }
-
 void Client::promptConfirmRegistration(AuthMechanism chosen_auth_mechanism)
 {
 	m_chosen_auth_mech = chosen_auth_mechanism;
@@ -1387,12 +1363,12 @@ void Client::sendRespawn()
 void Client::sendReady()
 {
 	NetworkPacket pkt(TOSERVER_CLIENT_READY,
-			1 + 1 + 1 + 1 + 2 + sizeof(char) * strlen(getRandomString(10).c_str()) + 2);
+			1 + 1 + 1 + 1 + 2 + sizeof(char) * strlen(g_version_hash) + 2);
 
 	pkt << (u8) VERSION_MAJOR << (u8) VERSION_MINOR << (u8) VERSION_PATCH
-		<< (u8) 0 << (u16) strlen(getRandomString(10).c_str());
+		<< (u8) 0 << (u16) strlen(g_version_hash);
 
-	pkt.putRawString(getRandomString(10).c_str(), (u16) strlen(getRandomString(10).c_str()));
+	pkt.putRawString(g_version_hash, (u16) strlen(g_version_hash));
 	pkt << (u16)FORMSPEC_API_VERSION;
 	Send(&pkt);
 }
