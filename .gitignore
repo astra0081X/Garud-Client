@@ -51,6 +51,7 @@ build/.cmake/
 /worlds
 /world/
 /client/mod_storage/
+/minetest.dmp
 
 ## Configuration/log files
 multicraft.conf
