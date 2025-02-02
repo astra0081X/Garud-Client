@@ -6,7 +6,7 @@ Garud Client [ANDROID]
 
 <img src="showcase/showcase.png" alt="showcase" width="80%" />
 
-A minetest cheat client for android based of off multicraft (A fork of minetest V5.4.1), fully developed on a phone. 
+Minetest utility and cheat client for android based of off multicraft (A fork of minetest V5.4.1), fully developed on a phone. 
 
 Due to multicraft being based on a relatively older version of minetest it misses a lot of new features so this client is not in active development anymore, although ill occasionaly commit to this repo if there any bugs.
 
