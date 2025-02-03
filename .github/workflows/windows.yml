@@ -25,8 +25,10 @@ jobs:
     name: VS 2019 ${{ matrix.config.arch }}-${{ matrix.type }}
     runs-on: windows-2019
     env:
-      VCPKG_VERSION: 2024.02.01
+      # Specific vcpkg commit SHA that matches the dependencies
+      VCPKG_COMMIT_ID: 501db0f17c40c1243482c093e609485fb88b741b
       vcpkg_packages: >-
+        irrlicht 
         zlib 
         zstd 
         curl[winssl] 
@@ -39,21 +41,19 @@ jobs:
         luajit 
         gmp 
         jsoncpp 
-        opengl-registry 
-        irrlicht
-      CMAKE_MINIMUM_REQUIRED_VERSION: 3.10
+        opengl-registry
     strategy:
       fail-fast: false
       matrix:
         config:
           - {
               arch: x86,
-              generator: "-G'Visual Studio 16 2019' -A Win32",
+              generator: "-G \"Visual Studio 16 2019\" -A Win32",
               vcpkg_triplet: x86-windows
             }
           - {
               arch: x64,
-              generator: "-G'Visual Studio 16 2019' -A x64",
+              generator: "-G \"Visual Studio 16 2019\" -A x64",
               vcpkg_triplet: x64-windows
             }
         type: [portable]
@@ -61,45 +61,46 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
 
       - name: Setup MSVC
         uses: microsoft/setup-msbuild@v1.3.1
 
-      - name: Restore from cache and run vcpkg
+      - name: Install vcpkg
         uses: lukka/run-vcpkg@v7
         with:
           vcpkgArguments: ${{env.vcpkg_packages}}
-          vcpkgDirectory: '${{ github.workspace }}\vcpkg'
-          appendedCacheKey: ${{ matrix.config.vcpkg_triplet }}
-          vcpkgGitCommitId: ${{ env.VCPKG_VERSION }}
+          vcpkgDirectory: ${{ github.workspace }}/vcpkg
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
           vcpkgTriplet: ${{ matrix.config.vcpkg_triplet }}
 
       - name: Create Build Directory
         run: mkdir build
 
-      - name: CMake Configure
+      - name: Configure CMake
+        shell: cmd
         working-directory: build
         run: |
-          cmake .. ${{matrix.config.generator}} `
-          -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake" `
-          -DCMAKE_BUILD_TYPE=Release `
-          -DENABLE_LUAJIT=TRUE `
-          -DREQUIRE_LUAJIT=TRUE `
-          -DCMAKE_POLICY_DEFAULT_CMP0025=NEW `
-          -DCMAKE_POLICY_DEFAULT_CMP0091=NEW `
-          -DCMAKE_POLICY_DEFAULT_CMP0177=NEW `
-          -DRUN_IN_PLACE=${{ contains(matrix.type, 'portable') }}
+          cmake .. %{{ matrix.config.generator }}% ^
+          -DCMAKE_TOOLCHAIN_FILE="%{{ github.workspace }}%/vcpkg/scripts/buildsystems/vcpkg.cmake" ^
+          -DCMAKE_BUILD_TYPE=Release ^
+          -DENABLE_LUAJIT=ON ^
+          -DREQUIRE_LUAJIT=ON ^
+          -DRUN_IN_PLACE=ON ^
+          -DBUILD_CLIENT=ON ^
+          -DBUILD_SERVER=OFF ^
+          -DCMAKE_POLICY_DEFAULT_CMP0091=NEW
 
       - name: Build
         working-directory: build
-        run: cmake --build . --config Release --parallel
+        run: |
+          cmake --build . --config Release --parallel %NUMBER_OF_PROCESSORS%
 
       - name: Package
         working-directory: build
+        shell: pwsh
         run: |
-          If ($env:TYPE -eq "portable")
-          {
+          If ($env:TYPE -eq "portable") {
             cpack -G ZIP -B "$env:GITHUB_WORKSPACE\Package"
           }
           if (Test-Path "$env:GITHUB_WORKSPACE\Package\_CPack_Packages") {
@@ -108,8 +109,9 @@ jobs:
         env:
           TYPE: ${{matrix.type}}
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: msvc-${{ matrix.config.arch }}-${{ matrix.type }}
+          name: garud-client-${{ matrix.config.arch }}-windows
           path: .\Package\
           if-no-files-found: error
