@@ -1,0 +1,79 @@
+name: Windows Build
+
+# Trigger on C/C++/Lua changes or workflow changes
+on:
+  push:
+    paths:
+      - '**.cpp'
+      - '**.h'
+      - '**.hpp'
+      - '**.c'
+      - '**.lua'
+      - '**/CMakeLists.txt'
+      - '.github/workflows/windows.yml'
+  pull_request:
+    paths:
+      - '**.cpp'
+      - '**.h'
+      - '**.hpp'
+      - '**.c'
+      - '**.lua'
+      - '**/CMakeLists.txt'
+      - '.github/workflows/windows.yml'
+
+jobs:
+  build:
+    name: "Windows Build (${{ matrix.config.arch }})"
+    runs-on: windows-2019
+    env:
+      VCPKG_VERSION: 2024.02.01
+      vcpkg_packages: zlib luajit opengl-registry sqlite3 curl[winssl] openal-soft libvorbis libogg
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {
+              arch: x64,
+              generator: "-G'Visual Studio 16 2019' -A x64",
+              vcpkg_triplet: x64-windows
+            }
+          - {
+              arch: x86,
+              generator: "-G'Visual Studio 16 2019' -A Win32",
+              vcpkg_triplet: x86-windows
+            }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v7
+        with:
+          vcpkgArguments: ${{env.vcpkg_packages}}
+          vcpkgDirectory: '${{ github.workspace }}\vcpkg'
+          vcpkgTriplet: ${{ matrix.config.vcpkg_triplet }}
+          appendedCacheKey: ${{ matrix.config.vcpkg_triplet }}
+
+      - name: Configure CMake
+        run: |
+          cmake ${{matrix.config.generator}} `
+          -DCMAKE_TOOLCHAIN_FILE="${{ github.workspace }}\vcpkg\scripts\buildsystems\vcpkg.cmake" `
+          -DCMAKE_BUILD_TYPE=Release `
+          -DENABLE_LUAJIT=TRUE `
+          -DREQUIRE_LUAJIT=TRUE .
+
+      - name: Build
+        run: cmake --build . --config Release
+
+      - name: Package
+        run: |
+          cpack -G ZIP -B "$env:GITHUB_WORKSPACE\Package"
+          Remove-Item -Recurse -Force "$env:GITHUB_WORKSPACE\Package\_CPack_Packages" -ErrorAction SilentlyContinue
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: garud-client-${{ matrix.config.arch }}-windows
+          path: .\Package\
+          if-no-files-found: error
