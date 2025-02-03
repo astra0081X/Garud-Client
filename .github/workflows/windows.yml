@@ -8,121 +8,65 @@ on:
       - 'src/**.[ch]'
       - 'src/**.cpp'
       - '**/CMakeLists.txt'
-      - 'cmake/Modules/**'
       - '.github/workflows/windows.yml'
   pull_request:
-    paths:
-      - 'lib/**.[ch]'
-      - 'lib/**.cpp'
-      - 'src/**.[ch]'
-      - 'src/**.cpp'
-      - '**/CMakeLists.txt'
-      - 'cmake/Modules/**'
-      - '.github/workflows/windows.yml'
 
 jobs:
-  msvc:
-    name: VS 2019 ${{ matrix.config.arch }}-${{ matrix.type }}
+  build:
     runs-on: windows-2019
-    env:
-      # Using the latest known working vcpkg commit
-      VCPKG_COMMIT_ID: 268c399988b69ec3bae4439113a189fca3fe99d0
-      vcpkg_packages: >-
-        irrlicht 
-        zlib 
-        zstd 
-        curl[winssl] 
-        openal-soft 
-        libvorbis 
-        libogg 
-        libjpeg-turbo 
-        sqlite3 
-        freetype 
-        luajit 
-        gmp 
-        jsoncpp 
-        opengl-registry
     strategy:
-      fail-fast: false
       matrix:
-        config:
-          - {
-              arch: x86,
-              generator: "-G \"Visual Studio 16 2019\" -A Win32",
-              vcpkg_triplet: x86-windows
-            }
-          - {
-              arch: x64,
-              generator: "-G \"Visual Studio 16 2019\" -A x64",
-              vcpkg_triplet: x64-windows
-            }
-        type: [portable]
+        arch: [x64, x86]
 
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-          fetch-depth: 0
 
-      - name: Setup MSVC
+      - name: Set up MSVC
         uses: microsoft/setup-msbuild@v1.3.1
 
-      - name: Cache vcpkg
-        uses: actions/cache@v3
-        with:
-          path: |
-            ${{ github.workspace }}/vcpkg
-            !${{ github.workspace }}/vcpkg/buildtrees
-            !${{ github.workspace }}/vcpkg/packages
-            !${{ github.workspace }}/vcpkg/downloads
-          key: vcpkg-${{ runner.os }}-${{ matrix.config.vcpkg_triplet }}-${{ env.VCPKG_COMMIT_ID }}
-
       - name: Install vcpkg
-        uses: lukka/run-vcpkg@v7
-        with:
-          vcpkgArguments: ${{env.vcpkg_packages}}
-          vcpkgDirectory: ${{ github.workspace }}/vcpkg
-          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
-          vcpkgTriplet: ${{ matrix.config.vcpkg_triplet }}
-
-      - name: Create Build Directory
-        run: mkdir build
-
-      - name: Configure CMake
-        shell: cmd
-        working-directory: build
         run: |
-          cmake .. %{{ matrix.config.generator }}% ^
-          -DCMAKE_TOOLCHAIN_FILE="%{{ github.workspace }}%/vcpkg/scripts/buildsystems/vcpkg.cmake" ^
-          -DCMAKE_BUILD_TYPE=Release ^
-          -DENABLE_LUAJIT=ON ^
-          -DREQUIRE_LUAJIT=ON ^
-          -DRUN_IN_PLACE=ON ^
-          -DBUILD_CLIENT=ON ^
-          -DBUILD_SERVER=OFF ^
-          -DCMAKE_POLICY_DEFAULT_CMP0091=NEW
+          git clone https://github.com/Microsoft/vcpkg.git
+          .\vcpkg\bootstrap-vcpkg.bat
+
+      - name: Install dependencies
+        run: |
+          .\vcpkg\vcpkg install --triplet ${{ matrix.arch }}-windows `
+          irrlicht `
+          zlib `
+          curl[winssl] `
+          openal-soft `
+          libvorbis `
+          libogg `
+          sqlite3 `
+          freetype `
+          luajit `
+          jsoncpp
+
+      - name: Configure
+        run: |
+          mkdir build
+          cd build
+          cmake .. -A ${{ matrix.arch }} `
+          -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+          -DCMAKE_BUILD_TYPE=Release `
+          -DRUN_IN_PLACE=ON `
+          -DBUILD_CLIENT=ON
 
       - name: Build
-        working-directory: build
         run: |
-          cmake --build . --config Release --parallel %NUMBER_OF_PROCESSORS%
+          cd build
+          cmake --build . --config Release
 
       - name: Package
-        working-directory: build
-        shell: pwsh
         run: |
-          If ($env:TYPE -eq "portable") {
-            cpack -G ZIP -B "$env:GITHUB_WORKSPACE\Package"
-          }
-          if (Test-Path "$env:GITHUB_WORKSPACE\Package\_CPack_Packages") {
-            Remove-Item -Recurse -Force "$env:GITHUB_WORKSPACE\Package\_CPack_Packages"
-          }
-        env:
-          TYPE: ${{matrix.type}}
+          cd build
+          cpack -G ZIP -B Package
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: garud-client-${{ matrix.config.arch }}-windows
-          path: .\Package\
+          name: garud-client-${{ matrix.arch }}-windows
+          path: build/Package/*
           if-no-files-found: error
