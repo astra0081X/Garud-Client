@@ -10,8 +10,6 @@ Minetest utility and cheat client for android based of off multicraft (A fork of
 
 Due to multicraft being based on a relatively older version of minetest it misses a lot of new features so this client is not in active development anymore, although ill occasionaly commit to this repo if there any bugs.
 
-We are currently working on the continuation of this project ([Project-PhantomX](https://github.com/Project-PhantomX)) which is based on minetest v5.11-dev and aims to target all major OS's like android, windows and mac. If you would like to join contact me on discord (astra008.).
-
 Info
 ------------------
 * Click on the tab button (below the chat button) for the cheat menu to show up
